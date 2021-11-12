@@ -2,17 +2,19 @@ import warnings
 
 warnings.filterwarnings('ignore', category=UserWarning)
 
+import argparse
 import multiprocessing as mp
-from pathos.multiprocessing import ProcessPool as Pool
 # from pathos import multiprocessing as mp
 import os
-import argparse
-from FlatlandEnv import *
-from Observer_Builder import DummyObserver
-from FlatlandObserver import FlatlandObserver
-from Map_Generator import *
+
+from pathos.multiprocessing import ProcessPool as Pool
 from tqdm import tqdm
+
 from Env_Builder import *
+from Map_Generator import *
+from Observer_Builder import DummyObserver
+from PRIMAL2_Env import *
+from PRIMAL2_Observer import PRIMAL2_Observer
 
 
 class MazeTestGenerator:

@@ -1,19 +1,19 @@
-import warnings
+import argparse
 import json
 import multiprocessing
 import os
-import argparse
+import warnings
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 warnings.filterwarnings('ignore', category=Warning)
-from PRIMAL2_Env import PRIMAL2_Env
-from PRIMAL2_Observer import PRIMAL2_Observer
-from OriginalPrimal_Observer import PRIMALObserver
+import tensorflow as tf
+
+from ACNet import ACNet
 from Map_Generator import *
 from Observer_Builder import DummyObserver
-
-import tensorflow as tf
-from ACNet import ACNet
+from OriginalPrimal_Observer import PRIMALObserver
+from PRIMAL2_Env import PRIMAL2_Env
+from PRIMAL2_Observer import PRIMAL2_Observer
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -37,7 +37,7 @@ class RL_Planner(MAPFEnv):
         config.gpu_options.per_process_gpu_memory_fraction = gpu_fraction
         self.sess = tf.Session(config=config)
 
-        self.num_channels = 18  # HAS TO BE ENTERED MANUALLY TO MATCH THE MODEL, to be read from DRLMAPF...
+        self.num_channels = 11  # HAS TO BE ENTERED MANUALLY TO MATCH THE MODEL, to be read from DRLMAPF...
         self.network = ACNet("global", a_size=5, trainer=None, TRAINING=False,
                              NUM_CHANNEL=self.num_channels,
                              OBS_SIZE=self.observer.observation_size,
@@ -305,14 +305,14 @@ class OneShotTestsRunner:
 if __name__ == "__main__":
     import time
 
-    model_path = './model_astar10_continuous/'
+    model_path = './model_primal2_oneshot'
     parser = argparse.ArgumentParser()
     parser.add_argument("--result_path", default="./testing_result/")
     parser.add_argument("--env_path", default='./primal2_testing_envs50/')
     parser.add_argument("-r", "--resume_testing", default=True, help="resume testing")
     parser.add_argument("-g", "--GIF_prob", default=0., help="write GIF")
-    parser.add_argument("-p", "--planner", default='mstar', help="choose between mstar and RL")
-    parser.add_argument("-n", "--mapName", default=None, help="single map name for multiprocessing")
+    parser.add_argument("-p", "--planner", default='RL', help="choose between mstar and RL")
+    parser.add_argument("-n", "--mapName", default='4agents_20size_0.3density_1wall_id0.npy', help="single map name for multiprocessing")
     args = parser.parse_args()
 
     # set a tester--------------------------------------------
@@ -328,7 +328,7 @@ if __name__ == "__main__":
         tester = OneShotTestsRunner(args.env_path,
                                     args.result_path,
                                     Planner=RL_Planner(
-                                        observer=PRIMAL2_Observer(observation_size=11, num_future_steps=10),
+                                        observer=PRIMAL2_Observer(observation_size=11, num_future_steps=3),
                                         model_path=model_path),
                                     resume_testing=args.resume_testing,
                                     GIF_prob=args.GIF_prob
