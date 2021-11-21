@@ -1,20 +1,18 @@
+from PRIMAL2_Observer import PRIMAL2_Observer
+from PRIMAL2_Env import *
+from Observer_Builder import DummyObserver
+from Map_Generator import *
+from Env_Builder import *
+from tqdm import tqdm
+from pathos.multiprocessing import ProcessPool as Pool
+import os
+import multiprocessing as mp
+import argparse
 import warnings
 
 warnings.filterwarnings('ignore', category=UserWarning)
 
-import argparse
-import multiprocessing as mp
 # from pathos import multiprocessing as mp
-import os
-
-from pathos.multiprocessing import ProcessPool as Pool
-from tqdm import tqdm
-
-from Env_Builder import *
-from Map_Generator import *
-from Observer_Builder import DummyObserver
-from PRIMAL2_Env import *
-from PRIMAL2_Observer import PRIMAL2_Observer
 
 
 class MazeTestGenerator:
@@ -23,7 +21,8 @@ class MazeTestGenerator:
         self.num_core = mp.cpu_count()
         self.parallel_pool = Pool()
         self.printInfo = printInfo
-        self.pureMaps = pureMaps  # if true, only save state_map and goals_map, else save the whole world
+        # if true, only save state_map and goals_map, else save the whole world
+        self.pureMaps = pureMaps
 
     def make_name(self, n, s, d, w, id, extension, dirname, extra=""):
         if dirname[-1] == '/':
@@ -35,7 +34,8 @@ class MazeTestGenerator:
 
     def create_map(self, num_agents, env_size, obs_dense, wall_component, id):
         num_agents, env_size, obs_dense, \
-        wall_component, id = int(num_agents), int(env_size), round(obs_dense, 2), round(wall_component, 2), int(id)
+            wall_component, id = int(num_agents), int(env_size), round(
+                obs_dense, 2), round(wall_component, 2), int(id)
         file_name = self.make_name(num_agents, env_size, obs_dense, wall_component, id,
                                    dirname=self.env_dir,
                                    extension='.npy')
@@ -76,7 +76,8 @@ class MazeTestGenerator:
         if not os.path.exists(self.env_dir):
             os.makedirs(self.env_dir)
         if multiProcessing:
-            print("Multi-processing activated, you are using {:d} processes".format(self.num_core))
+            print(
+                "Multi-processing activated, you are using {:d} processes".format(self.num_core))
         else:
             print("Single-processing activated, you are using 1 processes")
 
@@ -101,7 +102,8 @@ class MazeTestGenerator:
                                                                   wall_component, i)
                                 allResults.append(result)
                             else:
-                                self.create_map(num_agents, env_size, obs_dense, wall_component, i)
+                                self.create_map(
+                                    num_agents, env_size, obs_dense, wall_component, i)
 
         totalJobs = len(allResults)
         jobsCompleted = 0
@@ -132,7 +134,8 @@ class MazeTestInfoAdder(MazeTestGenerator):
     """
 
     def __init__(self, env_dir, printInfo=False):
-        super(MazeTestInfoAdder, self).__init__(env_dir=env_dir, printInfo=printInfo)
+        super(MazeTestInfoAdder, self).__init__(
+            env_dir=env_dir, printInfo=printInfo)
 
     def read_envs(self):
         # assert self.worker.test_type == self.test_type
@@ -161,7 +164,8 @@ class MazeTestInfoAdder(MazeTestGenerator):
 
         gameEnv = DummyEnv(num_agents=1,
                            observer=DummyObserver(),
-                           map_generator=manual_generator(state_map=state_map, goals_map=goals_map),
+                           map_generator=manual_generator(
+                               state_map=state_map, goals_map=goals_map),
                            IsDiagonal=False)
         state = np.array(gameEnv.world.state)
         goals = np.array(gameEnv.world.goals_map)
@@ -184,17 +188,20 @@ class MazeTestInfoAdder(MazeTestGenerator):
         if not os.path.exists(self.env_dir):
             os.makedirs(self.env_dir)
         if multiProcessing:
-            print("Multi-processing activated, you are using {:d} processes".format(self.num_core))
+            print(
+                "Multi-processing activated, you are using {:d} processes".format(self.num_core))
         else:
             print("Single-processing activated, you are using 1 processes")
 
         map_dict = self.read_envs()
-        print("There are " + str(len(map_dict.keys())) + " tests in total. Start Working!")
+        print("There are " + str(len(map_dict.keys())) +
+              " tests in total. Start Working!")
 
         allResults = []
         for file_name, maps in map_dict.items():
             if multiProcessing:
-                result = self.parallel_pool.apipe(self.add_info, maps[0], maps[1], file_name)
+                result = self.parallel_pool.apipe(
+                    self.add_info, maps[0], maps[1], file_name)
                 allResults.append(result)
                 # result.get()
             else:
@@ -217,22 +224,32 @@ class MazeTestInfoAdder(MazeTestGenerator):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-n", "--num_agents", default=[4, 8, 16, 32, 64, 128, 256, 512, 1024], help="number of agents in the env")
-    parser.add_argument("-s", "--env_size", default=[20, 40, 80, 160], help="env size")
-    parser.add_argument("-d", "--obs_dense", default=[0.3, 0.65], help="obstacle density of the env")
-    parser.add_argument("-w", "--wall_component", default=[1, 10, 20], help="average length of each wall")
-    parser.add_argument("-t", "--num_tests", default=50, help="number of tests per env setting")
-    parser.add_argument("-e", "--env_dir", default='./primal2_testing_envs50', help="dir where you want to save the envs")
-    parser.add_argument("-p", "--printInfo", default=True, help="if you want to print generated env info")
-    parser.add_argument("-a", "--addInfo", default=False, help="switch between addInfo mode and map generation mode")
-    parser.add_argument("--pureMaps", default=False, help="only generate state map and goals map in map generation")
+    parser.add_argument("-n", "--num_agents", default=[
+                        4, 8, 16, 32, 64, 128, 256, 512, 1024], help="number of agents in the env")
+    parser.add_argument("-s", "--env_size",
+                        default=[20, 40, 80, 160], help="env size")
+    parser.add_argument("-d", "--obs_dense",
+                        default=[0.3, 0.65], help="obstacle density of the env")
+    parser.add_argument("-w", "--wall_component",
+                        default=[1, 10, 20], help="average length of each wall")
+    parser.add_argument("-t", "--num_tests", default=50,
+                        help="number of tests per env setting")
+    parser.add_argument("-e", "--env_dir", default='./scenarios',
+                        help="dir where you want to save the envs")
+    parser.add_argument("-p", "--printInfo", default=True,
+                        help="if you want to print generated env info")
+    parser.add_argument("-a", "--addInfo", default=False,
+                        help="switch between addInfo mode and map generation mode")
+    parser.add_argument("--pureMaps", default=False,
+                        help="only generate state map and goals map in map generation")
     args = parser.parse_args()
 
     if args.addInfo:
         adder = MazeTestInfoAdder(args.env_dir, printInfo=args.printInfo)
         adder.run_mazeMap_infoAdder()
     else:
-        generator = MazeTestGenerator(args.env_dir, printInfo=args.printInfo, pureMaps=args.pureMaps)
+        generator = MazeTestGenerator(
+            args.env_dir, printInfo=args.printInfo, pureMaps=args.pureMaps)
         # generator.create_map(1, 10, 1, 1, 1, 1)
         generator.run_mazeMap_creator(args.num_agents, args.env_size, args.obs_dense,
                                       args.wall_component, args.num_tests)

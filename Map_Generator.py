@@ -1,6 +1,8 @@
-import numpy as np
 import random
 import sys
+
+import numpy as np
+
 from Env_Builder import World
 
 
@@ -193,7 +195,7 @@ def manual_generator(state_map, goals_map=None):
     state_map = np.array(state_map)
 
     assert state_map is not None
-    assert len(state_map.shape) == 2
+    assert len(state_map.shape) == 2, f"state_map must be a 2D array, got {state_map.shape}"
     assert min(state_map.shape) >= 5
     if goals_map is not None:
         goals_map = np.array(goals_map)

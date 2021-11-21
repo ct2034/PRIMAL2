@@ -4,11 +4,10 @@ import multiprocessing
 import os
 import warnings
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-warnings.filterwarnings('ignore', category=Warning)
 import tensorflow as tf
 
 from ACNet import ACNet
+from Env_Builder import *
 from Map_Generator import *
 from Observer_Builder import DummyObserver
 from OriginalPrimal_Observer import PRIMALObserver
@@ -16,13 +15,16 @@ from PRIMAL2_Env import PRIMAL2_Env
 from PRIMAL2_Observer import PRIMAL2_Observer
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+warnings.filterwarnings('ignore', category=Warning)
 
-from Env_Builder import *
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 class RL_Planner(MAPFEnv):
     def __init__(self, observer, model_path, gpu_fraction=0.04):
-        super().__init__(observer=observer, map_generator=DummyGenerator(), num_agents=1, isOneShot=True)
+        super().__init__(observer=observer,
+                         map_generator=DummyGenerator(), num_agents=1, isOneShot=True)
 
         self._set_testType()
         self._set_tensorflow(model_path, gpu_fraction)
@@ -37,7 +39,8 @@ class RL_Planner(MAPFEnv):
         config.gpu_options.per_process_gpu_memory_fraction = gpu_fraction
         self.sess = tf.Session(config=config)
 
-        self.num_channels = 11  # HAS TO BE ENTERED MANUALLY TO MATCH THE MODEL, to be read from DRLMAPF...
+        # HAS TO BE ENTERED MANUALLY TO MATCH THE MODEL, to be read from DRLMAPF...
+        self.num_channels = 11
         self.network = ACNet("global", a_size=5, trainer=None, TRAINING=False,
                              NUM_CHANNEL=self.num_channels,
                              OBS_SIZE=self.observer.observation_size,
@@ -76,9 +79,11 @@ class RL_Planner(MAPFEnv):
     def _reset(self, map_generator=None, worldInfo=None):
         self.map_generator = map_generator
         if worldInfo is not None:
-            self.world = TestWorld(self.map_generator, world_info=worldInfo, isDiagonal=self.IsDiagonal)
+            self.world = TestWorld(
+                self.map_generator, world_info=worldInfo, isDiagonal=self.IsDiagonal)
         else:
-            self.world = World(self.map_generator, num_agents=self.num_agents, isDiagonal=self.IsDiagonal)
+            self.world = World(
+                self.map_generator, num_agents=self.num_agents, isDiagonal=self.IsDiagonal)
             raise UserWarning('you are using re-computing env mode')
         self.num_agents = self.world.num_agents
         self.observer.set_env(self.world)
@@ -100,15 +105,15 @@ class RL_Planner(MAPFEnv):
                 goal_pos.append(agent_obs[1])
             # compute up to LSTM in parallel
             h3_vec = self.sess.run([self.network.h3],
-                                   feed_dict={self.network.inputs  : inputs,
+                                   feed_dict={self.network.inputs: inputs,
                                               self.network.goal_pos: goal_pos})
             h3_vec = h3_vec[0]
             # now go all the way past the lstm sequentially feeding the rnn_state
             for a in range(0, self.num_agents):
                 rnn_state = self.agent_states[a]
                 lstm_output, state = self.sess.run([self.network.rnn_out, self.network.state_out],
-                                                   feed_dict={self.network.inputs     : [inputs[a]],
-                                                              self.network.h3         : [h3_vec[a]],
+                                                   feed_dict={self.network.inputs: [inputs[a]],
+                                                              self.network.h3: [h3_vec[a]],
                                                               self.network.state_in[0]: rnn_state[0],
                                                               self.network.state_in[1]: rnn_state[1]})
                 rnn_out.append(lstm_output[0])
@@ -117,7 +122,8 @@ class RL_Planner(MAPFEnv):
             policy_vec = self.sess.run([self.network.policy],
                                        feed_dict={self.network.rnn_out: rnn_out})
             policy_vec = policy_vec[0]
-            action_dict = {agentID: np.argmax(policy_vec[agentID - 1]) for agentID in range(1, self.num_agents + 1)}
+            action_dict = {agentID: np.argmax(
+                policy_vec[agentID - 1]) for agentID in range(1, self.num_agents + 1)}
             return action_dict
 
         numCrashedAgents, computing_time = 0, 0
@@ -141,6 +147,7 @@ class RL_Planner(MAPFEnv):
         episode_status = 'no early stop'
 
         obs = self._observe()
+        print(obs)
         for step in range(1, max_length + 1):
             if saveImage:
                 frames.append(self._render(mode='rgb_array'))
@@ -163,11 +170,11 @@ class RL_Planner(MAPFEnv):
             frames.append(self._render(mode='rgb_array'))
 
         return step_count, num_crash, \
-               True if episode_status == 'succeed' else False, \
-               self.num_agents if episode_status == 'succeed' \
-                   else sum([1 if self.world.agents[agentID].status > 0
-                             else 0 for agentID in range(1, self.num_agents + 1)]), \
-               frames
+            True if episode_status == 'succeed' else False, \
+            self.num_agents if episode_status == 'succeed' \
+            else sum([1 if self.world.agents[agentID].status > 0
+                      else 0 for agentID in range(1, self.num_agents + 1)]), \
+            frames
 
 
 class MstarOneshotPlanner(MAPFEnv):
@@ -217,16 +224,19 @@ class MstarOneshotPlanner(MAPFEnv):
         except NoSolutionError:
             return -1, 0, False, -1, []
         if saveImage:
-            Warning("oneshot mstar doesn't support GIF generation for remaining a high testing speed")
+            Warning(
+                "oneshot mstar doesn't support GIF generation for remaining a high testing speed")
         #      step_count, num_crash, succeed, num_succeeded, frames
         return len(mstar_path), 0, True, self.world.num_agents, []
 
     def _reset(self, map_generator=None, worldInfo=None):
         self.map_generator = map_generator
         if worldInfo is not None:
-            self.world = TestWorld(self.map_generator, world_info=worldInfo, isDiagonal=self.IsDiagonal)
+            self.world = TestWorld(
+                self.map_generator, world_info=worldInfo, isDiagonal=self.IsDiagonal)
         else:
-            self.world = World(self.map_generator, num_agents=self.num_agents, isDiagonal=self.IsDiagonal)
+            self.world = World(
+                self.map_generator, num_agents=self.num_agents, isDiagonal=self.IsDiagonal)
         self.num_agents = self.world.num_agents
         self.observer.set_env(self.world)
         self.fresh = True
@@ -267,6 +277,9 @@ class OneShotTestsRunner:
                 return 480  # 384
             return 640  # 512
 
+        print("maps")
+        print(maps)
+
         self.worker._reset(map_generator=manual_generator(maps[0][0], maps[0][1]),
                            worldInfo=maps)
         env_name = name[:name.rfind('.')]
@@ -274,9 +287,10 @@ class OneShotTestsRunner:
         start_time = time.time()
         print("working on " + env_name)
 
-        env_size = int(env_name[env_name.find("_") + 1:env_name.find("size")])
+        env_size = max(maps[0][0].shape)
         max_length = get_maxLength(env_size)
-        result = self.worker.find_path(max_length=int(max_length), saveImage=np.random.rand() < self.GIF_prob)
+        result = self.worker.find_path(max_length=int(
+            max_length), saveImage=np.random.rand() < self.GIF_prob)
 
         step_count, num_crash, succeed, num_succeeded, frames = result
         results['time'] = time.time() - start_time
@@ -308,11 +322,14 @@ if __name__ == "__main__":
     model_path = './model_primal2_oneshot'
     parser = argparse.ArgumentParser()
     parser.add_argument("--result_path", default="./testing_result/")
-    parser.add_argument("--env_path", default='./primal2_testing_envs50/')
-    parser.add_argument("-r", "--resume_testing", default=True, help="resume testing")
+    parser.add_argument("--env_path", default='./scenarios/')
+    parser.add_argument("-r", "--resume_testing",
+                        default=True, help="resume testing")
     parser.add_argument("-g", "--GIF_prob", default=0., help="write GIF")
-    parser.add_argument("-p", "--planner", default='RL', help="choose between mstar and RL")
-    parser.add_argument("-n", "--mapName", default='4agents_20size_0.3density_1wall_id0.npy', help="single map name for multiprocessing")
+    parser.add_argument("-p", "--planner", default='RL',
+                        help="choose between mstar and RL")
+    parser.add_argument("-n", "--mapName", default='demo.npy',
+                        help="single map name for multiprocessing")
     args = parser.parse_args()
 
     # set a tester--------------------------------------------
@@ -328,7 +345,8 @@ if __name__ == "__main__":
         tester = OneShotTestsRunner(args.env_path,
                                     args.result_path,
                                     Planner=RL_Planner(
-                                        observer=PRIMAL2_Observer(observation_size=11, num_future_steps=3),
+                                        observer=PRIMAL2_Observer(
+                                            observation_size=11, num_future_steps=3),
                                         model_path=model_path),
                                     resume_testing=args.resume_testing,
                                     GIF_prob=args.GIF_prob
@@ -338,6 +356,7 @@ if __name__ == "__main__":
     # run the tests---------------------------------------------------------
 
     maps = tester.read_single_env(args.mapName)
+    print(maps)
     if maps is None:
         print(args.mapName, " already completed")
     else:
