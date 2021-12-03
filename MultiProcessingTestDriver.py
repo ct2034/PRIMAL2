@@ -1,13 +1,15 @@
-import warnings
+import argparse
 import multiprocessing
 import os
+import subprocess
 import time
+import warnings
+
+from pathos.multiprocessing import ProcessPool as Pool
 from tqdm import tqdm
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 warnings.filterwarnings('ignore', category=Warning)
-from pathos.multiprocessing import ProcessPool as Pool
-import argparse
-import subprocess
 
 
 def get_map_names(env_path, result_path, resume_testing):
@@ -61,7 +63,7 @@ def run_1_test_wrapper(args, name):
     This approach avoids any multiprocessing issues with tensorflow
     """
 
-    s = "python3.6 TestingEnv.py -r {resume_testing} -g {GIF_prob} " \
+    s = "python3.6 PRIMAL2/TestingEnv.py -r {resume_testing} -g {GIF_prob} " \
         + "-p {planner} -n {mapName}"
 
     s = s.format(resume_testing=args.resume_testing, GIF_prob=args.GIF_prob,
@@ -79,13 +81,16 @@ def run_1_test_wrapper(args, name):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--result_path", default="./oneshot_testing_result/")
-    parser.add_argument("--env_path", default='./primal2_testing_envs50/')
+    parser.add_argument("--result_path", default="./testing_result/")
+    parser.add_argument("--env_path", default='./scenarios/')
     parser.add_argument("--num_worker", default=10, type=int)
     parser.add_argument("--printInfo", default=True, type=bool)
-    parser.add_argument("-r", "--resume_testing", default=True, help="resume testing")
-    parser.add_argument("-g", "--GIF_prob", default=0., help="prob to write GIF")
-    parser.add_argument("-p", "--planner", default='mstar', help="choose between mstar and RL")
+    parser.add_argument("-r", "--resume_testing",
+                        default=False, help="resume testing")
+    parser.add_argument("-g", "--GIF_prob", default=0.,
+                        help="prob to write GIF")
+    parser.add_argument("-p", "--planner", default='RL',
+                        help="choose between mstar and RL")
     args = parser.parse_args()
 
     run_tests(args, args.env_path, args.result_path)

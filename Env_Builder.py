@@ -1,16 +1,18 @@
 import copy
-from operator import sub, add
-import gym
-import numpy as np
 import math
 import warnings
-from od_mstar3.col_set_addition import OutOfTimeError, NoSolutionError
-from od_mstar3 import od_mstar
-from GroupLock import Lock
-from matplotlib.colors import *
-from gym.envs.classic_control import rendering
+from operator import add, sub
+
+import gym
 import imageio
+import numpy as np
 from gym import spaces
+from gym.envs.classic_control import rendering
+from matplotlib.colors import *
+
+from GroupLock import Lock
+from od_mstar3 import od_mstar
+from od_mstar3.col_set_addition import NoSolutionError, OutOfTimeError
 
 
 def make_gif(images, fname):
@@ -74,7 +76,8 @@ def getAstarDistanceMap(map: np.array, start: tuple, goal: tuple, isCPython=Fals
         minF = 2 ** 31 - 1
         minNode = None
         for (i, j) in openSet:
-            if (i, j) not in fScore: continue
+            if (i, j) not in fScore:
+                continue
             if fScore[(i, j)] < minF:
                 minF = fScore[(i, j)]
                 minNode = (i, j)
@@ -91,7 +94,7 @@ def getAstarDistanceMap(map: np.array, start: tuple, goal: tuple, isCPython=Fals
             ax = node[0]
             ay = node[1]
             if (ax + dx >= map.shape[0] or ax + dx < 0 or ay + dy >= map.shape[
-                1] or ay + dy < 0):  # out of bounds
+                    1] or ay + dy < 0):  # out of bounds
                 continue
             if map[ax + dx, ay + dy] == -1:  # collide with static obstacle
                 continue
@@ -126,7 +129,8 @@ def getAstarDistanceMap(map: np.array, start: tuple, goal: tuple, isCPython=Fals
         fScore = dict()  # default infinity
 
         # our heuristic is euclidean distance to goal
-        heuristic_cost_estimate = lambda x, y: math.hypot(x[0] - y[0], x[1] - y[1])
+        def heuristic_cost_estimate(x, y): return math.hypot(
+            x[0] - y[0], x[1] - y[1])
 
         # For the first node, that value is completely heuristic.
         fScore[start] = heuristic_cost_estimate(start, goal)
@@ -153,7 +157,8 @@ def getAstarDistanceMap(map: np.array, start: tuple, goal: tuple, isCPython=Fals
                 # This path is the best until now. Record it!
                 cameFrom[neighbor] = current
                 gScore[neighbor] = tentative_gScore
-                fScore[neighbor] = gScore[neighbor] + heuristic_cost_estimate(neighbor, goal)
+                fScore[neighbor] = gScore[neighbor] + \
+                    heuristic_cost_estimate(neighbor, goal)
 
                 # parse through the gScores
         Astar_map = map.copy()
@@ -162,7 +167,8 @@ def getAstarDistanceMap(map: np.array, start: tuple, goal: tuple, isCPython=Fals
         return Astar_map
     else:
         planner = aStar(array=map)  # where 0 is free space, -1 is obstacle
-        return planner.getAstarDistanceMap(goal)  # should give you the distance map for a given goal
+        # should give you the distance map for a given goal
+        return planner.getAstarDistanceMap(goal)
 
 
 class Agent:
@@ -181,14 +187,14 @@ class Agent:
         self.IsDiagonal = isDiagonal
         self.freeze = 0
         self.position, self.position_history, self.ID, self.direction, self.direction_history, \
-        self.action_history, self.goal_pos, self.distanceMap, self.dones, self.status, self.next_goal, self.next_distanceMap \
+            self.action_history, self.goal_pos, self.distanceMap, self.dones, self.status, self.next_goal, self.next_distanceMap \
             = None, [], None, None, [(None, None)], [(None, None)], None, None, 0, None, None, None
 
     def reset(self):
         self._path_count = -1
         self.freeze = 0
         self.position, self.position_history, self.ID, self.direction, self.direction_history, \
-        self.action_history, self.goal_pos, self.distanceMap, self.dones, self.status, self.next_goal, self.next_distanceMap \
+            self.action_history, self.goal_pos, self.distanceMap, self.dones, self.status, self.next_goal, self.next_distanceMap \
             = None, [], None, None, [(None, None)], [(None, None)], None, None, 0, None, None, None
 
     def move(self, pos, status=None):
@@ -196,9 +202,11 @@ class Agent:
             pos = self.position
         if self.position is not None:
             assert pos in [self.position,
-                           tuple_plus(self.position, (0, 1)), tuple_plus(self.position, (0, -1)),
+                           tuple_plus(self.position, (0, 1)), tuple_plus(
+                               self.position, (0, -1)),
                            tuple_plus(self.position, (1, 0)), tuple_plus(self.position, (-1, 0)), ], \
-                "only 1 step 1 cell allowed. Previous pos:" + str(self.position)
+                "only 1 step 1 cell allowed. Previous pos:" + \
+                str(self.position)
         self.add_history(pos, status)
 
     def add_history(self, position, status):
@@ -263,17 +271,21 @@ class World:
                 warnings.warn("num_agent does not match the actual agent number in manual map! "
                               "num_agent has been set to be consistent with manual map.")
             self.num_agents = len(self.agents_init_pos.keys())
-            self.agents = {i: copy.deepcopy(Agent()) for i in range(1, self.num_agents + 1)}
+            self.agents = {i: copy.deepcopy(Agent())
+                           for i in range(1, self.num_agents + 1)}
         else:
             assert self.num_agents is not None
-            self.agents = {i: copy.deepcopy(Agent()) for i in range(1, self.num_agents + 1)}
+            self.agents = {i: copy.deepcopy(Agent())
+                           for i in range(1, self.num_agents + 1)}
         # detect manual goals_map
         if self.goals_map is not None:
             self.manual_goal = True
-            self.goals_init_pos = scan_for_agents(self.goals_map) if self.manual_goal else None
+            self.goals_init_pos = scan_for_agents(
+                self.goals_map) if self.manual_goal else None
 
         else:
-            self.goals_map = np.zeros([self.state.shape[0], self.state.shape[1]])
+            self.goals_map = np.zeros(
+                [self.state.shape[0], self.state.shape[1]])
 
         self.corridor_map = {}
         self.restrict_init_corridor = True
@@ -285,7 +297,8 @@ class World:
         """
         remove all the agents (with their travel history) and goals in the env, rebase the env into a blank one
         """
-        self.agents = {i: copy.deepcopy(Agent()) for i in range(1, self.num_agents + 1)}
+        self.agents = {i: copy.deepcopy(Agent())
+                       for i in range(1, self.num_agents + 1)}
         self.state[self.state > 0] = 0  # remove agents in the map
 
     def get_corridors(self):
@@ -320,9 +333,10 @@ class World:
                     self.visited.append((i, j))
                     for num in range(4):
                         if positions[num] is not None:
-                            self.visit(positions[num][0], positions[num][1], corridor_count)
+                            self.visit(
+                                positions[num][0], positions[num][1], corridor_count)
                     corridor_count += 1
-        # Get Delta X , Delta Y for the computed corridors ( Delta= Displacement to corridor exit)       
+        # Get Delta X , Delta Y for the computed corridors ( Delta= Displacement to corridor exit)
         for k in range(1, corridor_count):
             if k in self.corridors:
                 if len(self.corridors[k]['EndPoints']) == 2:
@@ -330,16 +344,20 @@ class World:
                     self.corridors[k]['DeltaY'] = {}
                     pos_a = self.corridors[k]['EndPoints'][0]
                     pos_b = self.corridors[k]['EndPoints'][1]
-                    self.corridors[k]['DeltaX'][pos_a] = (pos_a[0] - pos_b[0])  # / (max(1, abs(pos_a[0] - pos_b[0])))
-                    self.corridors[k]['DeltaX'][pos_b] = -1 * self.corridors[k]['DeltaX'][pos_a]
-                    self.corridors[k]['DeltaY'][pos_a] = (pos_a[1] - pos_b[1])  # / (max(1, abs(pos_a[1] - pos_b[1])))
-                    self.corridors[k]['DeltaY'][pos_b] = -1 * self.corridors[k]['DeltaY'][pos_a]
+                    # / (max(1, abs(pos_a[0] - pos_b[0])))
+                    self.corridors[k]['DeltaX'][pos_a] = (pos_a[0] - pos_b[0])
+                    self.corridors[k]['DeltaX'][pos_b] = - \
+                        1 * self.corridors[k]['DeltaX'][pos_a]
+                    # / (max(1, abs(pos_a[1] - pos_b[1])))
+                    self.corridors[k]['DeltaY'][pos_a] = (pos_a[1] - pos_b[1])
+                    self.corridors[k]['DeltaY'][pos_b] = - \
+                        1 * self.corridors[k]['DeltaY'][pos_a]
             else:
                 print('Weird2')
 
                 # Rearrange the computed corridor list such that it becomes easier to iterate over the structure
         # Basically, sort the self.corridors['Positions'] list in a way that the first element of the list is
-        # adjacent to Endpoint[0] and the last element of the list is adjacent to EndPoint[1] 
+        # adjacent to Endpoint[0] and the last element of the list is adjacent to EndPoint[1]
         # If there is only 1 endpoint, the sorting doesn't matter since blocking is easy to compute
         for t in range(1, corridor_count):
             positions = self.blank_env_valid_neighbor(self.corridors[t]['EndPoints'][0][0],
@@ -347,6 +365,8 @@ class World:
             for position in positions:
                 if position is not None and self.corridor_map[position][0] == t:
                     break
+            if position not in self.corridors[t]['Positions']:
+                break
             index = self.corridors[t]['Positions'].index(position)
 
             if index == 0:
@@ -381,11 +401,14 @@ class World:
             if len(self.corridors[t]['EndPoints']) == 2:
                 position_first = self.corridors[t]['Positions'][0]
                 position_last = self.corridors[t]['Positions'][-1]
-                self.corridors[t]['StoppingPoints'].append([position_first[0], position_first[1]])
-                self.corridors[t]['StoppingPoints'].append([position_last[0], position_last[1]])
+                self.corridors[t]['StoppingPoints'].append(
+                    [position_first[0], position_first[1]])
+                self.corridors[t]['StoppingPoints'].append(
+                    [position_last[0], position_last[1]])
             else:
                 position_first = self.corridors[t]['Positions'][0]
-                self.corridors[t]['StoppingPoints'].append([position[0], position[1]])
+                self.corridors[t]['StoppingPoints'].append(
+                    [position[0], position[1]])
                 self.corridors[t]['StoppingPoints'].append(None)
         return
 
@@ -393,7 +416,8 @@ class World:
         counter = 0
         for num in range(4):
             if positions[num] is not None:
-                new_positions = self.blank_env_valid_neighbor(positions[num][0], positions[num][1])
+                new_positions = self.blank_env_valid_neighbor(
+                    positions[num][0], positions[num][1])
                 if new_positions.count(None) in [2, 3]:
                     counter += 1
         return counter > 0
@@ -410,7 +434,8 @@ class World:
             self.corridor_map[(i, j)] = [corridor_id, 1]
             for num in range(4):
                 if positions[num] is not None and positions[num] not in self.visited:
-                    self.visit(positions[num][0], positions[num][1], corridor_id)
+                    self.visit(positions[num][0],
+                               positions[num][1], corridor_id)
         else:
             print('Weird')
 
@@ -443,7 +468,8 @@ class World:
         """
 
         if path_id is None:
-            path_id = self.agents[agent_id].path_count - 1 if self.agents[agent_id].path_count > 0 else 0
+            path_id = self.agents[agent_id].path_count - \
+                1 if self.agents[agent_id].path_count > 0 else 0
         try:
             return self.agents[agent_id].position_history[path_id], self.agents[agent_id].direction_history[path_id]
         except IndexError:
@@ -492,14 +518,16 @@ class World:
                     cell_info = corridor_map[position[0], position[1]][1]
                     if cell_info in [0, 2]:
                         if goal_map[position[0], position[1]] != agentID:
-                            manual_positions.update({idx: (position[0], position[1])})
+                            manual_positions.update(
+                                {idx: (position[0], position[1])})
                             free_space1.remove(position)
                             pos_set = True
                     elif cell_info == 1:
                         corridor_id = corridor_map[position[0], position[1]][0]
                         if corridor_id not in corridors_visited:
                             if goal_map[position[0], position[1]] != agentID:
-                                manual_positions.update({idx: (position[0], position[1])})
+                                manual_positions.update(
+                                    {idx: (position[0], position[1])})
                                 corridors_visited.append(corridor_id)
                                 free_space1.remove(position)
                                 pos_set = True
@@ -512,15 +540,20 @@ class World:
 
         # no corridor population restriction
         if not self.restrict_init_corridor or (self.restrict_init_corridor and self.manual_world):
-            self.put_goals(list(range(1, self.num_agents + 1)), self.goals_init_pos)
-            self._put_agents(list(range(1, self.num_agents + 1)), self.agents_init_pos)
+            self.put_goals(list(range(1, self.num_agents + 1)),
+                           self.goals_init_pos)
+            self._put_agents(
+                list(range(1, self.num_agents + 1)), self.agents_init_pos)
         # has corridor population restriction
         else:
-            check = self.put_goals(list(range(1, self.num_agents + 1)), self.goals_init_pos)
+            check = self.put_goals(
+                list(range(1, self.num_agents + 1)), self.goals_init_pos)
             if check is not None:
-                manual_positions = corridor_restricted_init_poss(self.state, self.corridor_map, self.goals_map)
+                manual_positions = corridor_restricted_init_poss(
+                    self.state, self.corridor_map, self.goals_map)
                 if manual_positions is not None:
-                    self._put_agents(list(range(1, self.num_agents + 1)), manual_positions)
+                    self._put_agents(
+                        list(range(1, self.num_agents + 1)), manual_positions)
 
     def _put_agents(self, id_list, manual_pos=None):
         """
@@ -531,8 +564,10 @@ class World:
         """
         if manual_pos is None:
             # randomly init agents everywhere
-            free_space = np.argwhere(np.logical_or(self.state == 0, self.goals_map == 0) == 1)
-            new_idx = np.random.choice(len(free_space), size=len(id_list), replace=False)
+            free_space = np.argwhere(np.logical_or(
+                self.state == 0, self.goals_map == 0) == 1)
+            new_idx = np.random.choice(
+                len(free_space), size=len(id_list), replace=False)
             init_poss = [free_space[idx] for idx in new_idx]
         else:
             assert len(manual_pos.keys()) == len(id_list)
@@ -544,11 +579,13 @@ class World:
             if self.state[init_poss[idx][0], init_poss[idx][1]] in [0, agentID] \
                     and self.goals_map[init_poss[idx][0], init_poss[idx][1]] != agentID:
                 self.state[init_poss[idx][0], init_poss[idx][1]] = agentID
-                self.agents_init_pos.update({agentID: (init_poss[idx][0], init_poss[idx][1])})
+                self.agents_init_pos.update(
+                    {agentID: (init_poss[idx][0], init_poss[idx][1])})
             else:
                 print(self.state)
                 print(init_poss)
-                raise ValueError('invalid manual_pos for agent' + str(agentID) + ' at: ' + str(init_poss[idx]))
+                raise ValueError('invalid manual_pos for agent' +
+                                 str(agentID) + ' at: ' + str(init_poss[idx]))
             self.agents[agentID].move(init_poss[idx])
             self.agents[agentID].distanceMap = getAstarDistanceMap(self.state, self.agents[agentID].position,
                                                                    self.agents[agentID].goal_pos)
@@ -570,26 +607,36 @@ class World:
             # print(previous_goals)
             if not all(previous_goals.values()):  # they are new born agents
                 free_space = np.argwhere(free_for_all == 1)
-                init_idx = np.random.choice(len(free_space), size=len(id_list), replace=False)
-                new_goals = {agentID: tuple(free_space[init_idx[agentID - 1]]) for agentID in id_list}
+                init_idx = np.random.choice(
+                    len(free_space), size=len(id_list), replace=False)
+                new_goals = {agentID: tuple(
+                    free_space[init_idx[agentID - 1]]) for agentID in id_list}
                 return new_goals
             else:
                 new_goals = {}
                 for agentID in id_list:
-                    free_on_agents = np.logical_and(self.state > 0, self.state != agentID)
-                    free_spaces_for_previous_goal = np.logical_or(free_on_agents, free_for_all)
+                    free_on_agents = np.logical_and(
+                        self.state > 0, self.state != agentID)
+                    free_spaces_for_previous_goal = np.logical_or(
+                        free_on_agents, free_for_all)
                     if distance > 0:
                         previous_x, previous_y = previous_goals[agentID]
-                        x_lower_bound = (previous_x - distance) if (previous_x - distance) > 0 else 0
+                        x_lower_bound = (
+                            previous_x - distance) if (previous_x - distance) > 0 else 0
                         x_upper_bound = previous_x + distance + 1
-                        y_lower_bound = (previous_y - distance) if (previous_x - distance) > 0 else 0
+                        y_lower_bound = (
+                            previous_y - distance) if (previous_x - distance) > 0 else 0
                         y_upper_bound = previous_y + distance + 1
-                        free_spaces_for_previous_goal[x_lower_bound:x_upper_bound, y_lower_bound:y_upper_bound] = False
-                    free_spaces_for_previous_goal = list(np.argwhere(free_spaces_for_previous_goal == 1))
-                    free_spaces_for_previous_goal = [pos.tolist() for pos in free_spaces_for_previous_goal]
+                        free_spaces_for_previous_goal[x_lower_bound:x_upper_bound,
+                                                      y_lower_bound:y_upper_bound] = False
+                    free_spaces_for_previous_goal = list(
+                        np.argwhere(free_spaces_for_previous_goal == 1))
+                    free_spaces_for_previous_goal = [
+                        pos.tolist() for pos in free_spaces_for_previous_goal]
 
                     try:
-                        init_idx = np.random.choice(len(free_spaces_for_previous_goal))
+                        init_idx = np.random.choice(
+                            len(free_spaces_for_previous_goal))
                         init_pos = free_spaces_for_previous_goal[init_idx]
                         new_goals.update({agentID: tuple(init_pos)})
                     except ValueError:
@@ -600,9 +647,11 @@ class World:
                         return None
                 return new_goals
 
-        previous_goals = {agentID: self.agents[agentID].goal_pos for agentID in id_list}
+        previous_goals = {
+            agentID: self.agents[agentID].goal_pos for agentID in id_list}
         if manual_pos is None:
-            new_goals = random_goal_pos(previous_goals, distance=self.goal_generate_distance)
+            new_goals = random_goal_pos(
+                previous_goals, distance=self.goal_generate_distance)
         else:
             new_goals = manual_pos
         if new_goals is not None:  # recursive breaker
@@ -611,20 +660,26 @@ class World:
                 if self.state[new_goals[agentID][0], new_goals[agentID][1]] >= 0:
                     if self.agents[agentID].next_goal is None:  # no next_goal to use
                         # set goals_map
-                        self.goals_map[new_goals[agentID][0], new_goals[agentID][1]] = agentID
+                        self.goals_map[new_goals[agentID][0],
+                                       new_goals[agentID][1]] = agentID
                         # set agent.goal_pos
-                        self.agents[agentID].goal_pos = (new_goals[agentID][0], new_goals[agentID][1])
+                        self.agents[agentID].goal_pos = (
+                            new_goals[agentID][0], new_goals[agentID][1])
                         # set agent.next_goal
-                        new_next_goals = random_goal_pos(new_goals, distance=self.goal_generate_distance)
+                        new_next_goals = random_goal_pos(
+                            new_goals, distance=self.goal_generate_distance)
                         if new_next_goals is None:
                             return None
-                        self.agents[agentID].next_goal = (new_next_goals[agentID][0], new_next_goals[agentID][1])
+                        self.agents[agentID].next_goal = (
+                            new_next_goals[agentID][0], new_next_goals[agentID][1])
                         # remove previous goal
                         if previous_goals[agentID] is not None:
-                            self.goals_map[previous_goals[agentID][0], previous_goals[agentID][1]] = 0
+                            self.goals_map[previous_goals[agentID]
+                                           [0], previous_goals[agentID][1]] = 0
                     else:  # use next_goal as new goal
                         # set goals_map
-                        self.goals_map[self.agents[agentID].next_goal[0], self.agents[agentID].next_goal[1]] = agentID
+                        self.goals_map[self.agents[agentID].next_goal[0],
+                                       self.agents[agentID].next_goal[1]] = agentID
                         # set agent.goal_pos
                         self.agents[agentID].goal_pos = self.agents[agentID].next_goal
                         # set agent.next_goal
@@ -632,17 +687,20 @@ class World:
                             new_goals[agentID][0], new_goals[agentID][1])  # store new goal into next_goal
                         # remove previous goal
                         if previous_goals[agentID] is not None:
-                            self.goals_map[previous_goals[agentID][0], previous_goals[agentID][1]] = 0
+                            self.goals_map[previous_goals[agentID]
+                                           [0], previous_goals[agentID][1]] = 0
                 else:
                     print(self.state)
                     print(self.goals_map)
-                    raise ValueError('invalid manual_pos for goal' + str(agentID) + ' at: ', str(new_goals[agentID]))
+                    raise ValueError('invalid manual_pos for goal' +
+                                     str(agentID) + ' at: ', str(new_goals[agentID]))
                 if previous_goals[agentID] is not None:  # it has a goal!
                     if previous_goals[agentID] != self.agents[agentID].position:
                         print(self.state)
                         print(self.goals_map)
                         print(previous_goals)
-                        raise RuntimeError("agent hasn't finished its goal but asking for a new goal!")
+                        raise RuntimeError(
+                            "agent hasn't finished its goal but asking for a new goal!")
 
                     refresh_distance_map = True
 
@@ -673,7 +731,8 @@ class World:
             raise NotImplemented
         Assumed_newPos_dict = {}
         newPos_dict = {}
-        status_dict = {agentID: None for agentID in range(1, self.num_agents + 1)}
+        status_dict = {agentID: None for agentID in range(
+            1, self.num_agents + 1)}
         not_checked_list = list(range(1, self.num_agents + 1))
 
         # detect env collision
@@ -695,16 +754,20 @@ class World:
             collided_ID = self.state[Assumed_newPos_dict[agentID]]
             if collided_ID != 0 and Assumed_newPos_dict[agentID] != self.getGoal(
                     agentID):  # some one is standing on the assumed pos
-                if Assumed_newPos_dict[collided_ID] == self.getPos(agentID):  # he wants to swap
+                # he wants to swap
+                if Assumed_newPos_dict[collided_ID] == self.getPos(agentID):
                     if status_dict[agentID] is None:
                         status_dict[agentID] = -2
-                        newPos_dict.update({agentID: self.getPos(agentID)})  # stand still
+                        newPos_dict.update(
+                            {agentID: self.getPos(agentID)})  # stand still
                         Assumed_newPos_dict[agentID] = self.getPos(agentID)
                         not_checked_list.remove(agentID)
                     if status_dict[collided_ID] is None:
                         status_dict[collided_ID] = -2
-                        newPos_dict.update({collided_ID: self.getPos(collided_ID)})  # stand still
-                        Assumed_newPos_dict[collided_ID] = self.getPos(collided_ID)
+                        newPos_dict.update(
+                            {collided_ID: self.getPos(collided_ID)})  # stand still
+                        Assumed_newPos_dict[collided_ID] = self.getPos(
+                            collided_ID)
                         not_checked_list.remove(collided_ID)
 
         # detect cell-wise collision
@@ -724,11 +787,13 @@ class World:
                 continue
             if Assumed_newPos_dict[agentID] in ignore_goal_agents_dict.values():
                 status_dict[agentID] = -3
-                newPos_dict.update({agentID: self.getPos(agentID)})  # stand still
+                newPos_dict.update(
+                    {agentID: self.getPos(agentID)})  # stand still
                 Assumed_newPos_dict[agentID] = self.getPos(agentID)
                 not_checked_list.remove(agentID)
             elif Assumed_newPos_dict[agentID] in other_agents_dict.values():
-                other_coming_agents = get_key(Assumed_newPos_dict, Assumed_newPos_dict[agentID])
+                other_coming_agents = get_key(
+                    Assumed_newPos_dict, Assumed_newPos_dict[agentID])
                 other_coming_agents.remove(agentID)
                 # if the agentID is the biggest among all other coming agents,
                 # allow it to move. Else, let it stand still
@@ -738,7 +803,8 @@ class World:
                     not_checked_list.remove(agentID)
                 else:
                     status_dict[agentID] = -3
-                    newPos_dict.update({agentID: self.getPos(agentID)})  # stand still
+                    newPos_dict.update(
+                        {agentID: self.getPos(agentID)})  # stand still
                     Assumed_newPos_dict[agentID] = self.getPos(agentID)
                     not_checked_list.remove(agentID)
 
@@ -756,8 +822,9 @@ class TestWorld(World):
     def __init__(self, map_generator, world_info, isDiagonal=False):
         super().__init__(map_generator, num_agents=None, isDiagonal=isDiagonal)
         [self.state, self.goals_map], \
-        self.agents_init_pos, self.corridor_map, self.corridors, self.agents = world_info
-        self.corridor_map, self.corridors = self.corridor_map[()], self.corridors[()]
+            self.agents_init_pos, self.corridor_map, self.corridors, self.agents = world_info
+        self.corridor_map, self.corridors = self.corridor_map[(
+        )], self.corridors[()]
         self.num_agents = len(self.agents_init_pos.keys())
 
     def reset_world(self):
@@ -782,15 +849,18 @@ class MAPFEnv(gym.Env):
         self.IsDiagonal = IsDiagonal
         self.set_world()
         self.obs_size = self.observer.observation_size
-        self.isStandingOnGoal = {i: False for i in range(1, self.num_agents + 1)}
+        self.isStandingOnGoal = {
+            i: False for i in range(1, self.num_agents + 1)}
 
         self.individual_rewards = {i: 0 for i in range(1, self.num_agents + 1)}
         self.done = False
         self.GIF_frame = []
         if IsDiagonal:
-            self.action_space = spaces.Tuple([spaces.Discrete(self.num_agents), spaces.Discrete(9)])
+            self.action_space = spaces.Tuple(
+                [spaces.Discrete(self.num_agents), spaces.Discrete(9)])
         else:
-            self.action_space = spaces.Tuple([spaces.Discrete(self.num_agents), spaces.Discrete(5)])
+            self.action_space = spaces.Tuple(
+                [spaces.Discrete(self.num_agents), spaces.Discrete(5)])
 
         self.ACTION_COST, self.GOAL_REWARD, self.COLLISION_REWARD = -0.3, 5., -2.
 
@@ -811,7 +881,8 @@ class MAPFEnv(gym.Env):
 
     def set_world(self):
 
-        self.world = World(self.map_generator, num_agents=self.num_agents, isDiagonal=self.IsDiagonal)
+        self.world = World(
+            self.map_generator, num_agents=self.num_agents, isDiagonal=self.IsDiagonal)
         self.num_agents = self.world.num_agents
         self.observer.set_env(self.world)
 
@@ -834,7 +905,8 @@ class MAPFEnv(gym.Env):
         Returns Dict of observation {agentid:[], ...}
         """
         if handles is None:
-            self.obs_dict = self.observer.get_many(list(range(1, self.num_agents + 1)))
+            self.obs_dict = self.observer.get_many(
+                list(range(1, self.num_agents + 1)))
         elif handles in list(range(1, self.num_agents + 1)):
             self.obs_dict = self.observer.get_many([handles])
         elif set(handles) == set(handles) & set(list(range(1, self.num_agents + 1))):
@@ -854,7 +926,8 @@ class MAPFEnv(gym.Env):
         """
 
         for agentID in range(1, self.num_agents + 1):
-            if self.world.agents[agentID].freeze > self.frozen_steps:  # set frozen agents free
+            # set frozen agents free
+            if self.world.agents[agentID].freeze > self.frozen_steps:
                 self.world.agents[agentID].freeze = 0
             if self.world.getDone(agentID) > 0 and self.isOneShot:
                 movement_dict.update({agentID: 0})
@@ -888,13 +961,15 @@ class MAPFEnv(gym.Env):
                 if not self.isOneShot:
                     if self.world.agents[agentID].freeze == 0:
                         put_goal_list.append(agentID)
-                    if self.world.agents[agentID].action_history[-1] == 0:  # standing still on goal
+                    # standing still on goal
+                    if self.world.agents[agentID].action_history[-1] == 0:
                         freeze_list.append(agentID)
                     self.world.agents[agentID].freeze += 1
                 else:
                     if self.world.state[newPos] == 0:
                         self.world.state[newPos] = 0
-                    self.world.agents[agentID].status = 2  # status=2 means done and removed from the env
+                    # status=2 means done and removed from the env
+                    self.world.agents[agentID].status = 2
                     self.world.goals_map[newPos] = 0
         free_agents = list(range(1, self.num_agents + 1))
 
@@ -943,11 +1018,13 @@ class MAPFEnv(gym.Env):
 
         def painter(state_map, agents_dict, goals_dict):
             def initColors(num_agents):
-                c = {a + 1: hsv_to_rgb(np.array([a / float(num_agents), 1, 1])) for a in range(num_agents)}
+                c = {
+                    a + 1: hsv_to_rgb(np.array([a / float(num_agents), 1, 1])) for a in range(num_agents)}
                 return c
 
             def create_rectangle(x, y, width, height, fill):
-                ps = [(x, y), ((x + width), y), ((x + width), (y + height)), (x, (y + height))]
+                ps = [(x, y), ((x + width), y),
+                      ((x + width), (y + height)), (x, (y + height))]
                 rect = rendering.FilledPolygon(ps)
                 rect.set_color(fill[0], fill[1], fill[2])
                 rect.add_attr(rendering.Transform())
@@ -962,14 +1039,19 @@ class MAPFEnv(gym.Env):
                 for i in range(numPoints):
                     # p1 and p3 are on the inner radius, and p2 is the point
                     pointAngle = math.pi / 2 + i * angleBetween
-                    p1X = centerX + innerRad * math.cos(pointAngle - angleBetween / 2)
-                    p1Y = centerY - innerRad * math.sin(pointAngle - angleBetween / 2)
+                    p1X = centerX + innerRad * \
+                        math.cos(pointAngle - angleBetween / 2)
+                    p1Y = centerY - innerRad * \
+                        math.sin(pointAngle - angleBetween / 2)
                     p2X = centerX + outerRad * math.cos(pointAngle)
                     p2Y = centerY - outerRad * math.sin(pointAngle)
-                    p3X = centerX + innerRad * math.cos(pointAngle + angleBetween / 2)
-                    p3Y = centerY - innerRad * math.sin(pointAngle + angleBetween / 2)
+                    p3X = centerX + innerRad * \
+                        math.cos(pointAngle + angleBetween / 2)
+                    p3Y = centerY - innerRad * \
+                        math.sin(pointAngle + angleBetween / 2)
                     # draw the triangle for each tip.
-                    poly = rendering.FilledPolygon([(p1X, p1Y), (p2X, p2Y), (p3X, p3Y)])
+                    poly = rendering.FilledPolygon(
+                        [(p1X, p1Y), (p2X, p2Y), (p3X, p3Y)])
                     poly.set_color(color[0], color[1], color[2])
                     poly.add_attr(rendering.Transform())
                     entry_list.append(poly)
@@ -995,7 +1077,8 @@ class MAPFEnv(gym.Env):
             colors = initColors(num_agents)
             if self.viewer is None:
                 self.viewer = rendering.Viewer(screen_width, screen_height)
-                rect = create_rectangle(0, 0, screen_width, screen_height, (.6, .6, .6))
+                rect = create_rectangle(
+                    0, 0, screen_width, screen_height, (.6, .6, .6))
                 self._add_rendering_entry(rect, permanent=True)
                 for i in range(world_shape[0]):
                     start = 0
@@ -1013,7 +1096,8 @@ class MAPFEnv(gym.Env):
                         if write:
                             x = i * world_size
                             y = start * world_size
-                            rect = create_rectangle(x, y, world_size, world_size * (end - start), (1, 1, 1))
+                            rect = create_rectangle(
+                                x, y, world_size, world_size * (end - start), (1, 1, 1))
                             self._add_rendering_entry(rect, permanent=True)
                             write = False
             for agent in range(1, num_agents + 1):
@@ -1042,4 +1126,3 @@ class MAPFEnv(gym.Env):
 
         frame = painter(self.world.state, self.getPositions(), self.getGoals())
         return frame
-

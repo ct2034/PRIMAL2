@@ -148,6 +148,7 @@ class RL_Planner(MAPFEnv):
 
         obs = self._observe()
         print(obs)
+        paths = []
         for step in range(1, max_length + 1):
             if saveImage:
                 frames.append(self._render(mode='rgb_array'))
@@ -165,6 +166,7 @@ class RL_Planner(MAPFEnv):
             if time_limit < computing_time:
                 episode_status = "timeout"
                 break
+            paths.append(self.getPositions())
 
         if saveImage:
             frames.append(self._render(mode='rgb_array'))
@@ -174,7 +176,7 @@ class RL_Planner(MAPFEnv):
             self.num_agents if episode_status == 'succeed' \
             else sum([1 if self.world.agents[agentID].status > 0
                       else 0 for agentID in range(1, self.num_agents + 1)]), \
-            frames
+            frames, paths
 
 
 class MstarOneshotPlanner(MAPFEnv):
@@ -292,12 +294,13 @@ class OneShotTestsRunner:
         result = self.worker.find_path(max_length=int(
             max_length), saveImage=np.random.rand() < self.GIF_prob)
 
-        step_count, num_crash, succeed, num_succeeded, frames = result
+        step_count, num_crash, succeed, num_succeeded, frames, paths = result
         results['time'] = time.time() - start_time
         results['steps'] = str(step_count) + '/' + str(max_length)
         results['crashed'] = num_crash
         results['succeed'] = succeed
         results['num_succeeded'] = num_succeeded
+        results['paths'] = paths
 
         self.make_gif(frames, env_name, self.worker.method)
         self.write_files(results, env_name, self.worker.method)
